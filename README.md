@@ -24,11 +24,26 @@ Las entidades que encontramos fueron: usuario (el acosador), perfil (el acosado)
 La interfaz de usuario se compone de un nombre y contraseña ya que la librería te pide un usuario de instagram para usar la API. **IMPORTANTE**: no usen sus usuarios reales de instagram, prueben con uno vacío o que no utilicen por las dudas. 
 La interfaz de perfil se compone de un usuario (que es al que vamos a acosar).
 La interfaz de notificación va a tener un mensaje, es un string. 
-La función extraerFotosPerfil recibe un parámetro que es el nombre del acosado y va a devolver un array de string. En ese array van a estar las urls de cada foto a descargar. Adentro de esta función van a tener que declarar ese array, que es el mismo que va a recibir la siguiente función (descargarFotosPerfil).
-La función descargarFotosPerfil recibe el array creado en la función anterior (extraerFotosPerfil) y devuelve un array de strings.
-La función avisoPosteo recibe el perfil de nuestro acosado. Esta función lo que va a hacer es mandarle una notificación al acosador avisandole que el acosado hizo un nuevo posteo. 
+La función `extraerFotosPerfil` recibe un parámetro que es el nombre del acosado y va a devolver un array de string. En ese array van a estar las urls de cada foto a descargar. Adentro de esta función van a tener que declarar ese array, que es el mismo que va a recibir la siguiente función (`descargarFotosPerfil`).
+La función `descargarFotosPerfil` recibe el array creado en la función anterior (`extraerFotosPerfil`) y devuelve un array de strings.
+La función `avisoPosteo` recibe el perfil de nuestro acosado. Esta función lo que va a hacer es mandarle una notificación al acosador avisandole que el acosado hizo un nuevo posteo. 
 
-## API:
+## API Instagram:
 Para utilizar la api, lo primero que tenés que hacer es instalarla. Para eso, ejecutá en la consola la siguiente línea:
-`npm install instagram-private-api`
+`npm install instagram-private-api`.
+La línea `const ig = new IgApiClient();` inicializa el cliente de Instagram y lo prepara para realizar acciones utilizando la API de Instagram a través de la biblioteca instagram-private-api (o sea, se está conectando con la API privada de Instagram).
+Para loguearse, hicimos un try/catch. Cuando accede el usuario (el acosador), se va a buscar el nombre del usuario acosado y se mostrará en pantalla el id (que luego les va a servir para el código). Si el usuario y contraseña del acosador no son correctos, le tirará un error.
+
+## API Notificación:
+Para la notificación vamos a usar NodeMailer, que te permite enviar un mail a través de un servidor creado en el código. Es bastante útil y permitirá que el acosador pueda mirar las imágenes incluso sin la computadora a mano. Esta librería primero te pide crear un objeto transportador, que sería el camino que recorre el mail cuando se envía. Se inicializa host y puerto que usará el mail. Después se ponen los datos del mail, de que dirección a qué dirección y contenido. Y por último utiliza el transportador para enviar el mail.
+El auth es la credencial de autenticación que corresponde a un correo electrónico válido en Ethereal Email para poder mandar correos. 
+Hay un auth de prueba que se puede utilizar pero decidimos crear uno nuevo. Los datos son:
+Abraham Stroman
+user: `abraham.stroman@ethereal.email`
+pass: `nSYNpNrvd7gXWqVTT6`
+El auth nunca lo van a tener que cambiar, siempre va a quedar así.
+**IMPORTANTE**: Nunca les va a llegar el mail, ya lo probamos, no lo intenten. Porque el ethereal.email está hecho para debuggear el código, no manda el mail. A lo que le tienen que prestar atención es a que cuando lo ejecutan, la consola les diga "Mensaje enviado". Eso significa que la función está funcionando. 
+
+appinstagramprogra@gmail.com
+programacion4
 

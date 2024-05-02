@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "instagram-private-api": "^1.46.1"
+    "instagram-private-api": "^1.46.1",
+    "nodemailer": "^6.9.13"
   }
 }
