@@ -1,16 +1,16 @@
 import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
-import { agregarPerfil, borrarPerfil, consultarListado, verificarAlertas } from "./Modelo";
+import { agregarPerfil, borrarPerfil} from "./Modelo";
 
 dotenv.config();
 
 const app: Express = express();
 const port = process.env.PORT || 3000;
 
-app.get("/", async (req: Request, res: Response) => {
+/* app.get("/", async (req: Request, res: Response) => {
     const listado = await consultarListado();
     res.send(listado);
-});
+}); */
 
 // index.ts
 app.get("/agregar/:nombre", async (req: Request, res: Response) => {
@@ -26,10 +26,10 @@ app.delete("/borrar/:id", async (req: Request, res: Response) => {
 });
 
 
-app.get("/verificarAlertas", async (req: Request, res: Response) => {
+/* app.get("/verificarAlertas", async (req: Request, res: Response) => {
     const alertas = await verificarAlertas();
     res.send(alertas);
-});
+}); */
 
 app.listen(port, () => {
     console.log(`[server]: Servidor iniciado en http://localhost:${port}`);

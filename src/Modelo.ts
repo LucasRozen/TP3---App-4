@@ -38,7 +38,7 @@ export async function agregarPerfil(nombre: string): Promise<Perfil> {
 export async function borrarPerfil(id: number): Promise<void> {
     const db = await abrirConexion();
 
-    const query = `DELETE FROM Ciudad WHERE id='${id}'`;
+    const query = `DELETE FROM Perfiles WHERE id='${id}'`;
     await db.run(query);
 }
 

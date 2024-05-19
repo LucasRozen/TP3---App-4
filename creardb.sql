@@ -1,5 +1,5 @@
 
-CREATE TABLE Perfiles(
+/* CREATE TABLE Perfiles(
 	id INTEGER PRIMARY KEY,
     nombre TEXT NOT NULL
 );
@@ -10,7 +10,7 @@ CREATE TABLE Notificaciones (
 );
 
 INSERT INTO Perfiles (nombre) VALUES ("leomessi");
-INSERT INTO Perfiles (nombre) VALUES ("multimedia.umai");
+INSERT INTO Perfiles (nombre) VALUES ("multimedia.umai"); */
 
  SELECT * FROM Perfiles;
 
