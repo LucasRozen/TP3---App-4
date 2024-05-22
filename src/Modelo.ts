@@ -8,10 +8,15 @@ export interface Usuario {
 }
 
 export interface Perfil {
-    nombrePerfil: string
+    nombre: string
 }
 export interface Notificacion {
     mensaje: string
+}
+
+export interface Imagen {
+    id: number,
+    Perfil: number
 }
 
 async function abrirConexion() {
@@ -21,20 +26,19 @@ async function abrirConexion() {
     })
 }
 
-// Agrega una nuevo Perfil a la base de datos
+//Perfiles
 export async function agregarPerfil(nombre: string): Promise<Perfil> {
     const db = await abrirConexion();
     const query = `INSERT INTO Perfiles (nombre) VALUES ('${nombre}')`;
     await db.run(query);
 
-    const perfil = await db.get<Perfil>(`SELECT * FROM Perfiles WHERE nombre=${nombre}`);
+    const perfil = await db.get<Perfil>(`SELECT * FROM Perfiles WHERE nombre="${nombre}"`);
     if (perfil == undefined)
         throw new Error("Esto nunca deberia pasar!");
 
     return perfil;
 }
 
-// Borra un Perfil de la base de datos
 export async function borrarPerfil(id: number): Promise<void> {
     const db = await abrirConexion();
 
@@ -42,6 +46,31 @@ export async function borrarPerfil(id: number): Promise<void> {
     await db.run(query);
 }
 
+export async function listarPerfiles(): Promise<Perfil[]> {
+    const db = await abrirConexion();
+
+    const perfiles: Perfil[] = await db.all<Perfil[]>('SELECT * FROM Perfiles');
+    return perfiles;
+}
+
+//Imagenes
+export async function agregarImagen(id: number, perfil: number): Promise<Imagen> {
+    const db = await abrirConexion();
+    const query = `INSERT INTO Imagenes (id, perfil) VALUES ('${id}', '${perfil}')`;
+    await db.run(query);
+
+    const imagen = await db.get<Imagen>(`SELECT * FROM Imagenes WHERE id="${id}"`);
+    if (imagen == undefined)
+        throw new Error("Esto nunca deberia pasar!");
+
+    return imagen;
+}
+
+export async function listarImagenesPorPerfil(idPerfil: number): Promise<Imagen[]> {
+    const db = await abrirConexion();
+    const imagenes: Imagen[] = await db.all<Imagen[]>(`SELECT * FROM Imagenes where perfil = ${idPerfil}`);
+    return imagenes;
+}
 
 // --------------
 // Esta función tiene que crear un array de urls que es el que va a 

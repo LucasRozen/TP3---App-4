@@ -1,7 +1,7 @@
-
-/* CREATE TABLE Perfiles(
+/*
+ CREATE TABLE Perfiles(
 	id INTEGER PRIMARY KEY,
-    nombre TEXT NOT NULL
+    nombre TEXT NOT NULL UNIQUE
 );
 
 CREATE TABLE Notificaciones (
@@ -12,5 +12,11 @@ CREATE TABLE Notificaciones (
 INSERT INTO Perfiles (nombre) VALUES ("leomessi");
 INSERT INTO Perfiles (nombre) VALUES ("multimedia.umai"); */
 
- SELECT * FROM Perfiles;
+-- DROP table Perfiles;
 
+-- delete from Perfiles where nombre="Pedro";
+
+CREATE TABLE Imagenes(
+	id INTEGER PRIMARY KEY,
+    Perfil INTEGER NOT NULL UNIQUE
+);
