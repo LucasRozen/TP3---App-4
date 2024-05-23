@@ -1,6 +1,6 @@
 import express, { Express, Request, Response, NextFunction} from "express";
 import dotenv from "dotenv";
-import { agregarImagen, agregarPerfil, borrarPerfil, listarPerfiles} from "./Modelo";
+import { agregarImagen, agregarPerfil, borrarPerfil, listarImagenesPorPerfil, listarPerfiles} from "./Modelo";
 import { log } from "console";
 
 dotenv.config();
@@ -70,6 +70,18 @@ app.post("/imagen/agregar", async (req: Request, res: Response, next: NextFuncti
         next(error);
     }
 });
+
+app.get("/imagen/:idPerfil", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const idPerfil = req.params.idPerfil;
+        const listado = await listarImagenesPorPerfil(parseInt(idPerfil));
+        res.send(listado);
+    } catch (error) {
+        next(error);
+    }
+});
+
+
 
 /* app.get("/imagen/:idImagen", async (req: Request, res: Response, next: NextFunction) => {
     try {

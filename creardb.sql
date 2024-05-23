@@ -16,7 +16,10 @@ INSERT INTO Perfiles (nombre) VALUES ("multimedia.umai"); */
 
 -- delete from Perfiles where nombre="Pedro";
 
-CREATE TABLE Imagenes(
-	id INTEGER PRIMARY KEY,
-    Perfil INTEGER NOT NULL UNIQUE
-);
+-- CREATE TABLE Imagenes(
+-- 	id INTEGER PRIMARY KEY,
+--     Perfil INTEGER NOT NULL
+-- );
+-- drop table Imagenes;
+
+select * from Perfiles;

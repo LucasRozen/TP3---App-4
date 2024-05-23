@@ -1,5 +1,11 @@
 import sqlite3 from 'sqlite3'
 import { open } from 'sqlite'
+import { IgApiClient } from 'instagram-private-api';
+import * as nodemailer from "nodemailer";
+import fs from 'fs';
+import request from 'request';
+
+export const ig = new IgApiClient();
 
 export interface Usuario {
     nombre: string,
@@ -16,8 +22,10 @@ export interface Notificacion {
 
 export interface Imagen {
     id: number,
-    Perfil: number
+    perfil: number
 }
+
+let contadorDeImagenes = 1;
 
 async function abrirConexion() {
     return open({
@@ -25,6 +33,15 @@ async function abrirConexion() {
         driver: sqlite3.Database
     })
 }
+
+ig.state.generateDevice("desdeelbarro10");
+(async () => {
+  
+  const loggedInUser = await ig.account.login("desdeelbarro10", "DesdeElBarroPodcast");
+  
+console.log('¡Iniciaste sesión como:', loggedInUser.username);
+ 
+})();
 
 //Perfiles
 export async function agregarPerfil(nombre: string): Promise<Perfil> {
@@ -68,7 +85,21 @@ export async function agregarImagen(id: number, perfil: number): Promise<Imagen>
 
 export async function listarImagenesPorPerfil(idPerfil: number): Promise<Imagen[]> {
     const db = await abrirConexion();
-    const imagenes: Imagen[] = await db.all<Imagen[]>(`SELECT * FROM Imagenes where perfil = ${idPerfil}`);
+    let imagenes: Imagen[] = await db.all<Imagen[]>(`SELECT * FROM Imagenes where perfil = ${idPerfil}`);
+    if(imagenes.length === 0){
+        const perfil = await db.get<Perfil>(`SELECT * FROM Perfiles WHERE id="${idPerfil}"`);
+        if(perfil === undefined){
+            return [];
+        }
+        const urls = await extraerFotosPerfil(perfil.nombre);
+        for (let i = contadorDeImagenes; i < urls.length + contadorDeImagenes; i++) {
+            const nombreArchivo = `${i}.jpg`;
+            await descargarImagen(urls[i], nombreArchivo);
+            const imagen = await agregarImagen(i, idPerfil);
+            console.log(`Imagen agregada: ${imagen.id} - ${imagen.perfil}`);
+            imagenes.push(imagen);
+        }
+    }
     return imagenes;
 }
 
@@ -79,23 +110,84 @@ export async function listarImagenesPorPerfil(idPerfil: number): Promise<Imagen[
 export async function extraerFotosPerfil(nombrePerfil: string): Promise<string[]> {
     // Aquí implementarían la lógica para extraer las fotos del perfil dado
     // Va a retornar un arreglo de URLs de las imágenes
-    const db = await abrirConexion();
-
-   
-    return [];
+    try {
+        // Buscamos el usuario por nombre de perfil
+        const usuario = await ig.user.searchExact(nombrePerfil);    
+        // Si el usuario existe, obtenemos las fotos de su perfil
+        if (usuario) {
+          // Obtenemos las fotos del perfil
+          const media = ig.feed.user(usuario.pk);
+          const items = await media.items();
+          // Extraemos las URLs de las fotos
+          const urlsFotos: string[] = [];
+          for (const post of items) {
+            if (post.carousel_media) {
+              for (const carouselItem of post.carousel_media) {
+                urlsFotos.push(carouselItem.image_versions2.candidates[0].url);
+              }
+            } else {
+              urlsFotos.push(post.image_versions2.candidates[0].url);
+            }
+          }
+          //console.log('Fotos de perfil:', urlsFotos);    
+          // Devolvemos las URLs de las fotos
+          return urlsFotos;
+        } else {
+          // Si el usuario no existe, devolvemos un array vacío
+          return [];
+        }
+      } catch (error) {
+        console.error('Error al extraer fotos de perfil:', error);
+        return [];
+      }
 }
 
-// Esta función va a recibir el mismo array que devuelva la función extraerFotosPerfil 
-// Y va a devolver otro array de strings
-export function descargarFotosPerfil(urls: string[]): string[] {
-    // Aquí implementarían la lógica para descargar las fotos dadas por las URLs
-    return[];
-}
+const descargarImagen = async (url: string, nombreArchivo: string) => {
+    const response = await fetch(url);
+    const buffer = await response.arrayBuffer();
+    const arrayBufferView = new Uint8Array(buffer);
 
+    fs.writeFile(`imagenes/${nombreArchivo}`, arrayBufferView, (err) => {
+        if (err) {
+            console.error(`Error al guardar la imagen: ${err.message}`);
+            return;
+        }
+        console.log(`Imagen ${nombreArchivo} descargada con éxito`);
+    });
+};
+
+
+//Notificaciones
 // Esta función recibe un perfil, que es un string
-export function avisoPosteo(perfil: string) {
+export async function avisoPosteo(perfil: string) {
     // Aquí implementarían la lógica para enviar un aviso cuando 
     // se realice un nuevo posteo en el perfil dado
+    // Intenta enviar el correo
+  try {
+    // Creamos una const transporter. El transporter es un objeto que se encarga de mandar el correo
+    const transporter = nodemailer.createTransport({
+      service: 'hotmail', // Por ejemplo, 'gmail', 'hotmail', etc.
+      auth: {
+        user: 'appinstagramprogra@hotmail.com',
+        pass: 'programacion4'
+      },
+    });
+
+    // Enviar correo con los datos que correspondan
+    const info = await transporter.sendMail({
+      // El from siempre va a quedar así
+      from: '"Programación Cuatro" <appinstagramprogra@hotmail.com>', // sender address
+      to: "lucaslrozenberg@gmail.com", // lista de destinatarios, va a ir a nuestro acosador (NOE NO ES LA ACOSADORA QUE QUIERE STALKEAR A SU EX, ES SOLO UNA PRUEBA)
+      subject: "Acoso", // asunto
+      text: "Hola acosador, ¿cómo estás?", // cuerpo de texto 
+    });
+
+    // Si me muestra esto en consola, es que funcionó y se envió el mensaje
+    console.log("Mensaje enviado: %s", info.messageId);
+    // Si no puede enviar el correo, muestra error
+  } catch (error) {
+    console.error("Error al enviar el mensaje:", error);
+  }
 }
 
 
