@@ -22,4 +22,10 @@ INSERT INTO Perfiles (nombre) VALUES ("multimedia.umai"); */
 -- );
 -- drop table Imagenes;
 
-select * from Perfiles;
+select * from Perfiles where id = 4;
+
+alter table Perfiles add urlUltimaPublicacion varchar(255);
+
+select * from Notificaciones;
+
+drop table Notificaciones;

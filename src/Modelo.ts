@@ -7,6 +7,7 @@ import request from 'request';
 
 export const ig = new IgApiClient();
 
+//Interfaces
 export interface Usuario {
     nombre: string,
     clave: string,
@@ -14,7 +15,8 @@ export interface Usuario {
 }
 
 export interface Perfil {
-    nombre: string
+    nombre: string,
+    urlUltimaPublicacion: string
 }
 export interface Notificacion {
     mensaje: string
@@ -25,8 +27,7 @@ export interface Imagen {
     perfil: number
 }
 
-let contadorDeImagenes = 1;
-
+//Base de datos
 async function abrirConexion() {
     return open({
         filename: 'db.sqlite',
@@ -39,14 +40,14 @@ ig.state.generateDevice("desdeelbarro10");
   
   const loggedInUser = await ig.account.login("desdeelbarro10", "DesdeElBarroPodcast");
   
-console.log('¡Iniciaste sesión como:', loggedInUser.username);
+  console.log('¡Iniciaste sesión como:', loggedInUser.username);
  
 })();
 
 //Perfiles
-export async function agregarPerfil(nombre: string): Promise<Perfil> {
+export async function agregarPerfil(nombre: string, url: string): Promise<Perfil> {
     const db = await abrirConexion();
-    const query = `INSERT INTO Perfiles (nombre) VALUES ('${nombre}')`;
+    const query = `INSERT INTO Perfiles (nombre, urlUltimaPublicacion) VALUES ('${nombre}', '${url})`;
     await db.run(query);
 
     const perfil = await db.get<Perfil>(`SELECT * FROM Perfiles WHERE nombre="${nombre}"`);
@@ -86,19 +87,21 @@ export async function agregarImagen(id: number, perfil: number): Promise<Imagen>
 export async function listarImagenesPorPerfil(idPerfil: number): Promise<Imagen[]> {
     const db = await abrirConexion();
     let imagenes: Imagen[] = await db.all<Imagen[]>(`SELECT * FROM Imagenes where perfil = ${idPerfil}`);
-    if(imagenes.length === 0){
-        const perfil = await db.get<Perfil>(`SELECT * FROM Perfiles WHERE id="${idPerfil}"`);
-        if(perfil === undefined){
-            return [];
-        }
+    const perfil = await db.get<Perfil>(`SELECT * FROM Perfiles WHERE id="${idPerfil}"`);
+    if(perfil === undefined){
+        return [];
+    }
+    if(await subioFotoNueva(idPerfil, perfil.nombre)){
         const urls = await extraerFotosPerfil(perfil.nombre);
-        for (let i = contadorDeImagenes; i < urls.length + contadorDeImagenes; i++) {
+        for (let i = imagenes.length; i < urls.length + imagenes.length; i++) {
             const nombreArchivo = `${i}.jpg`;
             await descargarImagen(urls[i], nombreArchivo);
             const imagen = await agregarImagen(i, idPerfil);
             console.log(`Imagen agregada: ${imagen.id} - ${imagen.perfil}`);
             imagenes.push(imagen);
         }
+        const query = `UPDATE Perfiles SET urlUltimaPublicacion='${urls[0]}' WHERE id='${idPerfil}'`;
+        await db.run(query);
     }
     return imagenes;
 }
@@ -156,38 +159,71 @@ const descargarImagen = async (url: string, nombreArchivo: string) => {
     });
 };
 
+async function obtenerUltimaPublicacion(nombrePerfil: string): Promise<string> {
+    // Aquí implementarían la lógica para extraer la última publicación del perfil dado
+    // Va a retornar un string con la URL de la última publicación
+    try {
+        // Buscamos el usuario por nombre de perfil
+        const usuario = await ig.user.searchExact(nombrePerfil);
+        // Si el usuario existe, obtenemos las fotos de su perfil
+        if (usuario) {
+            // Obtenemos las fotos del perfil
+            const media = ig.feed.user(usuario.pk);
+            const items = await media.items();
+            // Extraemos la URL de la última publicación
+            const urlUltimaPublicacion = items[0].image_versions2.candidates[0].url;
+            console.log('URL de la última publicación:', urlUltimaPublicacion);
+            // Devolvemos la URL de la última publicación
+            return urlUltimaPublicacion;
+        } else {
+            // Si el usuario no existe, devolvemos un string vacío
+            return '';
+        }
+    } catch (error) {
+        console.error('Error al extraer la última publicación:', error);
+        return '';
+    }
+}
 
-//Notificaciones
+const transporter = nodemailer.createTransport({
+  service: 'hotmail', // Por ejemplo, 'gmail', 'hotmail', etc.
+  auth: {
+    user: 'appinstagramprogra@hotmail.com',
+    pass: 'programacion4'
+  },
+});
+
+async function subioFotoNueva(idPerfil: number, nombrePerfil: string) {
+    const db = await abrirConexion();
+    const ultimaUrlGuardada = await db.all<string>(`SELECT urlUltimaPublicacion FROM Perfiles where id = ${idPerfil}`);
+    const urlUltimaImagen = await obtenerUltimaPublicacion(nombrePerfil);
+    
+    return ultimaUrlGuardada !== urlUltimaImagen;
+}
+
 // Esta función recibe un perfil, que es un string
-export async function avisoPosteo(perfil: string) {
+export async function avisoPosteo(perfil: string, idPerfil: number) {
     // Aquí implementarían la lógica para enviar un aviso cuando 
     // se realice un nuevo posteo en el perfil dado
     // Intenta enviar el correo
-  try {
-    // Creamos una const transporter. El transporter es un objeto que se encarga de mandar el correo
-    const transporter = nodemailer.createTransport({
-      service: 'hotmail', // Por ejemplo, 'gmail', 'hotmail', etc.
-      auth: {
-        user: 'appinstagramprogra@hotmail.com',
-        pass: 'programacion4'
-      },
-    });
-
-    // Enviar correo con los datos que correspondan
-    const info = await transporter.sendMail({
-      // El from siempre va a quedar así
-      from: '"Programación Cuatro" <appinstagramprogra@hotmail.com>', // sender address
-      to: "lucaslrozenberg@gmail.com", // lista de destinatarios, va a ir a nuestro acosador (NOE NO ES LA ACOSADORA QUE QUIERE STALKEAR A SU EX, ES SOLO UNA PRUEBA)
-      subject: "Acoso", // asunto
-      text: "Hola acosador, ¿cómo estás?", // cuerpo de texto 
-    });
-
-    // Si me muestra esto en consola, es que funcionó y se envió el mensaje
-    console.log("Mensaje enviado: %s", info.messageId);
-    // Si no puede enviar el correo, muestra error
-  } catch (error) {
-    console.error("Error al enviar el mensaje:", error);
-  }
+    if(await subioFotoNueva(idPerfil, perfil) ){
+      try {
+        // Creamos una const transporter. El transporter es un objeto que se encarga de mandar el correo   
+        // Enviar correo con los datos que correspondan
+        const info = await transporter.sendMail({
+          // El from siempre va a quedar así
+          from: '"Programación Cuatro" <appinstagramprogra@hotmail.com>', // sender address
+          to: "lucaslrozenberg@gmail.com", // lista de destinatarios, va a ir a nuestro acosador (NOE NO ES LA ACOSADORA QUE QUIERE STALKEAR A SU EX, ES SOLO UNA PRUEBA)
+          subject: `${perfil} subió foto nueva`, // asunto
+          text: `${perfil} subió foto nueva`, // cuerpo de texto 
+        });  
+        // Si me muestra esto en consola, es que funcionó y se envió el mensaje
+        console.log("Mensaje enviado: %s", info.messageId);
+        // Si no puede enviar el correo, muestra error
+      } catch (error) {
+        console.error("Error al enviar el mensaje:", error);
+      }
+    }
 }
 
 
