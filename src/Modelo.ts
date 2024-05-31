@@ -15,6 +15,7 @@ export interface Usuario {
 }
 
 export interface Perfil {
+    id: number,
     nombre: string,
     urlUltimaPublicacion: string
 }
@@ -24,7 +25,7 @@ export interface Notificacion {
 
 export interface Imagen {
     id: number,
-    perfil: number
+    Perfil: number
 }
 
 //Base de datos
@@ -47,7 +48,7 @@ ig.state.generateDevice("desdeelbarro10");
 //Perfiles
 export async function agregarPerfil(nombre: string, url: string): Promise<Perfil> {
     const db = await abrirConexion();
-    const query = `INSERT INTO Perfiles (nombre, urlUltimaPublicacion) VALUES ('${nombre}', '${url})`;
+    const query = `INSERT INTO Perfiles (nombre, urlUltimaPublicacion) VALUES ('${nombre}', '${url}')`;
     await db.run(query);
 
     const perfil = await db.get<Perfil>(`SELECT * FROM Perfiles WHERE nombre="${nombre}"`);
@@ -88,16 +89,22 @@ export async function listarImagenesPorPerfil(idPerfil: number): Promise<Imagen[
     const db = await abrirConexion();
     let imagenes: Imagen[] = await db.all<Imagen[]>(`SELECT * FROM Imagenes where perfil = ${idPerfil}`);
     const perfil = await db.get<Perfil>(`SELECT * FROM Perfiles WHERE id="${idPerfil}"`);
-    if(perfil === undefined){
-        return [];
-    }
+    if(perfil === undefined) return [];
     if(await subioFotoNueva(idPerfil, perfil.nombre)){
+        let contOrdenado = imagenes.length;
         const urls = await extraerFotosPerfil(perfil.nombre);
-        for (let i = imagenes.length; i < urls.length + imagenes.length; i++) {
-            const nombreArchivo = `${i}.jpg`;
+        /* console.log("urls: " + urls);
+        console.log("imagenes: " + imagenes);
+        console.log("imagenes.length: " + imagenes.length);
+        console.log("urls.length: " + urls.length); */
+        console.log("urls.length: " + urls.length);
+        for (let i = urls.length - imagenes.length - 1; i >= 0; i--) {
+            const nombreArchivo = `${contOrdenado}.jpg`;
+            console.log("urlsqueseguardan: " + (urls.length-contOrdenado));
             await descargarImagen(urls[i], nombreArchivo);
-            const imagen = await agregarImagen(i, idPerfil);
-            console.log(`Imagen agregada: ${imagen.id} - ${imagen.perfil}`);
+            const imagen = await agregarImagen(contOrdenado, idPerfil);
+            console.log(`Imagen agregada: ${imagen.id} - ${imagen.Perfil}`);
+            contOrdenado++;
             imagenes.push(imagen);
         }
         const query = `UPDATE Perfiles SET urlUltimaPublicacion='${urls[0]}' WHERE id='${idPerfil}'`;
@@ -121,14 +128,18 @@ export async function extraerFotosPerfil(nombrePerfil: string): Promise<string[]
           // Obtenemos las fotos del perfil
           const media = ig.feed.user(usuario.pk);
           const items = await media.items();
+          let postInfo;
           // Extraemos las URLs de las fotos
           const urlsFotos: string[] = [];
           for (const post of items) {
             if (post.carousel_media) {
               for (const carouselItem of post.carousel_media) {
+                /*postInfo = ig.media.info(post.pk);
+                const date = postInfo.date;*/
                 urlsFotos.push(carouselItem.image_versions2.candidates[0].url);
               }
             } else {
+              //date = ig.media.info({post.pk}).date;
               urlsFotos.push(post.image_versions2.candidates[0].url);
             }
           }
@@ -146,6 +157,7 @@ export async function extraerFotosPerfil(nombrePerfil: string): Promise<string[]
 }
 
 const descargarImagen = async (url: string, nombreArchivo: string) => {
+  console.log(url);
     const response = await fetch(url);
     const buffer = await response.arrayBuffer();
     const arrayBufferView = new Uint8Array(buffer);
@@ -197,118 +209,35 @@ async function subioFotoNueva(idPerfil: number, nombrePerfil: string) {
     const db = await abrirConexion();
     const ultimaUrlGuardada = await db.all<string>(`SELECT urlUltimaPublicacion FROM Perfiles where id = ${idPerfil}`);
     const urlUltimaImagen = await obtenerUltimaPublicacion(nombrePerfil);
+    console.log(urlUltimaImagen);
     
     return ultimaUrlGuardada !== urlUltimaImagen;
 }
 
-// Esta función recibe un perfil, que es un string
-export async function avisoPosteo(perfil: string, idPerfil: number) {
+// Esta función tiene que enviar un correo cuando se realice un nuevo posteo en cualquier perfil
+export async function avisoPosteo() {
     // Aquí implementarían la lógica para enviar un aviso cuando 
     // se realice un nuevo posteo en el perfil dado
     // Intenta enviar el correo
-    if(await subioFotoNueva(idPerfil, perfil) ){
-      try {
-        // Creamos una const transporter. El transporter es un objeto que se encarga de mandar el correo   
-        // Enviar correo con los datos que correspondan
-        const info = await transporter.sendMail({
-          // El from siempre va a quedar así
-          from: '"Programación Cuatro" <appinstagramprogra@hotmail.com>', // sender address
-          to: "lucaslrozenberg@gmail.com", // lista de destinatarios, va a ir a nuestro acosador (NOE NO ES LA ACOSADORA QUE QUIERE STALKEAR A SU EX, ES SOLO UNA PRUEBA)
-          subject: `${perfil} subió foto nueva`, // asunto
-          text: `${perfil} subió foto nueva`, // cuerpo de texto 
-        });  
-        // Si me muestra esto en consola, es que funcionó y se envió el mensaje
-        console.log("Mensaje enviado: %s", info.messageId);
-        // Si no puede enviar el correo, muestra error
-      } catch (error) {
-        console.error("Error al enviar el mensaje:", error);
+    const perfiles = await listarPerfiles();
+    perfiles.forEach(async perfil => {
+      if(await subioFotoNueva(perfil.id, perfil.nombre) ){
+        try {
+          // Creamos una const transporter. El transporter es un objeto que se encarga de mandar el correo   
+          // Enviar correo con los datos que correspondan
+          const info = await transporter.sendMail({
+            // El from siempre va a quedar así
+            from: '"Programación Cuatro" <appinstagramprogra@hotmail.com>', // sender address
+            to: "lucaslrozenberg@gmail.com", // lista de destinatarios, va a ir a nuestro acosador (NOE NO ES LA ACOSADORA QUE QUIERE STALKEAR A SU EX, ES SOLO UNA PRUEBA)
+            subject: `${perfil} subió foto nueva`, // asunto
+            text: `${perfil} subió foto nueva`, // cuerpo de texto 
+          });  
+          // Si me muestra esto en consola, es que funcionó y se envió el mensaje
+          console.log("Mensaje enviado: %s", info.messageId);
+          // Si no puede enviar el correo, muestra error
+        } catch (error) {
+          console.error("Error al enviar el mensaje:", error);
+        }
       }
-    }
+  });
 }
-
-
-
-
-
-
-
-
-
-
-// Borra una ciudad de la base de datos
-// export async function borrarCiudad(nombre: string): Promise<void> {
-//     const db = await abrirConexion();
-
-//     const query = `DELETE FROM Ciudad WHERE nombre='${nombre}'`;
-//     await db.run(query);
-// }
-
-// async function actualizarTemperatura(idCiudad: number, temperatura: number) {
-//     const db = await abrirConexion();
-
-//     const query = `UPDATE Ciudad SET temperatura=${temperatura} WHERE id=${idCiudad}`;
-//     await db.run(query);
-// }
-
-// // Arma un Listado que contiene todas las ciudades en la base de datos
-// export async function consultarListado(): Promise<Listado> {
-//     const db = await abrirConexion();
-
-//     const ciudades: Ciudad[] = await db.all<Ciudad[]>('SELECT * FROM Ciudad');
-//     return { ciudades: ciudades };
-// }
-
-// // Proceso que se ejecuta cada una hora y chequea si hay que mandar una alerta
-// export async function verificarAlertas(): Promise<Alerta[]> {
-//     const db = await abrirConexion();
-
-//     const ciudades: Ciudad[] = await db.all<Ciudad[]>('SELECT * FROM Ciudad');
-
-//     // Itero todas las ciudades y si me devolvio alguna alerta la agrego a la lista de retorno
-//     var alertas: Alerta[] = [];
-
-//     for (let i = 0; i < ciudades.length; i++) {
-//         const ciudad = ciudades[i];
-//         var alerta = await verificarAlertasParaCiudad(ciudad);
-//         if (alerta != null)
-//             alertas.push(alerta);
-//     }
-
-//     return alertas;
-// }
-
-// async function verificarAlertasParaCiudad(ciudad: Ciudad): Promise<Alerta | null> {
-//     // Busco la latitud y longitud de esta ciudad. Estaria bueno guardar esta info en la tabla de Ciudades porque no cambia en el tiempo.
-//     const response1 = await fetch(
-//         `https://geocoding-api.open-meteo.com/v1/search?name=${ciudad.nombre}&count=1&language=en&format=json`
-//     )
-//     const response1Json = await response1.json() as any
-//     // console.log(response1Json)
-//     const { latitude, longitude } = response1Json.results[0]
-
-//     // console.log(latitude)
-//     // console.log(longitude)
-
-//     // Busco la ultima temperatura en base a la lat y long
-//     const response2 = await fetch(
-//         `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&forecast_days=1`
-//     )
-//     const { current } = await response2.json() as any;
-//     var temperatura = current.temperature_2m;
-
-//     // Actualizo la termperatura actual para la ciudad
-//     console.log(`Temperatura para ${ciudad.nombre}: ${temperatura}`);
-//     actualizarTemperatura(ciudad.id, temperatura);
-
-
-//     // Ajuste los valores para que me tire mas alertas
-//     if (temperatura >= 30 || temperatura <= 18) {
-//         return {
-//             cuando: new Date(),
-//             nombreCiudad: ciudad.nombre,
-//             temperaturaActual: temperatura
-//         }
-//     } else {
-//         return null
-//     }
-// }

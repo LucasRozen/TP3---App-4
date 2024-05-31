@@ -22,10 +22,18 @@ INSERT INTO Perfiles (nombre) VALUES ("multimedia.umai"); */
 -- );
 -- drop table Imagenes;
 
-select * from Perfiles where id = 4;
+delete urlUltimaPublicacion from Perfiles where id = 1;
+
+update Perfiles set urlUltimaPublicacion = '' where id = 2;
 
 alter table Perfiles add urlUltimaPublicacion varchar(255);
 
-select * from Notificaciones;
+select * from Imagenes where Perfil = 1;
 
 drop table Notificaciones;
+
+delete from Imagenes where Perfil = 2;
+
+select * from Perfiles;
+
+INSERT INTO Perfiles (nombre) VALUES ("leomessi");

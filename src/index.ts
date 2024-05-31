@@ -83,9 +83,7 @@ app.get("/imagen/:idPerfil", async (req: Request, res: Response, next: NextFunct
 
 app.post("/checkearFotoNueva", async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const idPerfil = req.body.perfil.id;
-        const nombrePefil = req.body.perfil.nombre;
-        await avisoPosteo(nombrePefil, parseInt(idPerfil));
+        await avisoPosteo();
         res.send("OK");
     } catch (error) {
         next(error);
