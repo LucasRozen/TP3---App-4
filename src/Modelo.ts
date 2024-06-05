@@ -3,7 +3,6 @@ import { open } from 'sqlite'
 import { IgApiClient } from 'instagram-private-api';
 import * as nodemailer from "nodemailer";
 import fs from 'fs';
-import request from 'request';
 
 export const ig = new IgApiClient();
 
@@ -13,16 +12,14 @@ export interface Usuario {
     clave: string,
     email: string
 }
-
 export interface Perfil {
     id: number,
     nombre: string,
-    urlUltimaPublicacion: string
+    idUltimaPublicacion: string
 }
 export interface Notificacion {
     mensaje: string
 }
-
 export interface Imagen {
     id: number,
     Perfil: number
@@ -46,9 +43,10 @@ ig.state.generateDevice("desdeelbarro10");
 })();
 
 //Perfiles
-export async function agregarPerfil(nombre: string, url: string): Promise<Perfil> {
+export async function agregarPerfil(nombre: string): Promise<Perfil> {
     const db = await abrirConexion();
-    const query = `INSERT INTO Perfiles (nombre, urlUltimaPublicacion) VALUES ('${nombre}', '${url}')`;
+    const idUltimaPublicacion = await obtenerUltimaPublicacion(nombre);
+    const query = `INSERT INTO Perfiles (nombre, idUltimaPublicacion) VALUES ('${nombre}', '${idUltimaPublicacion}')`;
     await db.run(query);
 
     const perfil = await db.get<Perfil>(`SELECT * FROM Perfiles WHERE nombre="${nombre}"`);
@@ -87,30 +85,26 @@ export async function agregarImagen(id: number, perfil: number): Promise<Imagen>
 
 export async function listarImagenesPorPerfil(idPerfil: number): Promise<Imagen[]> {
     const db = await abrirConexion();
-    let imagenes: Imagen[] = await db.all<Imagen[]>(`SELECT * FROM Imagenes where perfil = ${idPerfil}`);
+    let imagenesPerfil: Imagen[] = await db.all<Imagen[]>(`SELECT * FROM Imagenes where perfil = ${idPerfil}`);
+    let cantTotalDeImagenes: number = (await db.all<Imagen[]>(`SELECT * FROM Imagenes;`)).length;
     const perfil = await db.get<Perfil>(`SELECT * FROM Perfiles WHERE id="${idPerfil}"`);
     if(perfil === undefined) return [];
     if(await subioFotoNueva(idPerfil, perfil.nombre)){
-        let contOrdenado = imagenes.length;
         const urls = await extraerFotosPerfil(perfil.nombre);
-        /* console.log("urls: " + urls);
-        console.log("imagenes: " + imagenes);
-        console.log("imagenes.length: " + imagenes.length);
-        console.log("urls.length: " + urls.length); */
         console.log("urls.length: " + urls.length);
-        for (let i = urls.length - imagenes.length - 1; i >= 0; i--) {
-            const nombreArchivo = `${contOrdenado}.jpg`;
-            console.log("urlsqueseguardan: " + (urls.length-contOrdenado));
-            await descargarImagen(urls[i], nombreArchivo);
-            const imagen = await agregarImagen(contOrdenado, idPerfil);
-            console.log(`Imagen agregada: ${imagen.id} - ${imagen.Perfil}`);
-            contOrdenado++;
-            imagenes.push(imagen);
+        for (let i = urls.length - imagenesPerfil.length - 1; i >= 0; i--) {
+          const nombreArchivo = `${cantTotalDeImagenes}.jpg`;
+          await descargarImagen(urls[i], nombreArchivo);
+          const imagen = await agregarImagen(cantTotalDeImagenes, idPerfil);
+          imagenesPerfil.push(imagen);
+          console.log(`Imagen agregada: ${imagen.id} - ${imagen.Perfil}`);
+          cantTotalDeImagenes++;
         }
-        const query = `UPDATE Perfiles SET urlUltimaPublicacion='${urls[0]}' WHERE id='${idPerfil}'`;
+        const idUltimaPublicacion = await obtenerUltimaPublicacion(perfil.nombre);
+        const query = `UPDATE Perfiles SET idUltimaPublicacion='${idUltimaPublicacion}' WHERE id='${idPerfil}'`;
         await db.run(query);
     }
-    return imagenes;
+    return imagenesPerfil;
 }
 
 // --------------
@@ -131,17 +125,15 @@ export async function extraerFotosPerfil(nombrePerfil: string): Promise<string[]
           let postInfo;
           // Extraemos las URLs de las fotos
           const urlsFotos: string[] = [];
-          for (const post of items) {
-            if (post.carousel_media) {
-              for (const carouselItem of post.carousel_media) {
-                /*postInfo = ig.media.info(post.pk);
-                const date = postInfo.date;*/
-                urlsFotos.push(carouselItem.image_versions2.candidates[0].url);
-              }
-            } else {
-              //date = ig.media.info({post.pk}).date;
-              urlsFotos.push(post.image_versions2.candidates[0].url);
-            }
+          for (let i = 0; i < items.length; i++) {
+            const post = items[i];
+            let imageUrl;
+
+            if(post.carousel_media)
+              imageUrl = post.carousel_media[0].image_versions2.candidates[0].url;
+            else
+              imageUrl = post.image_versions2.candidates[0].url;                      
+            if (imageUrl) urlsFotos.push(imageUrl);                  
           }
           //console.log('Fotos de perfil:', urlsFotos);    
           // Devolvemos las URLs de las fotos
@@ -182,11 +174,11 @@ async function obtenerUltimaPublicacion(nombrePerfil: string): Promise<string> {
             // Obtenemos las fotos del perfil
             const media = ig.feed.user(usuario.pk);
             const items = await media.items();
-            // Extraemos la URL de la última publicación
-            const urlUltimaPublicacion = items[0].image_versions2.candidates[0].url;
-            console.log('URL de la última publicación:', urlUltimaPublicacion);
-            // Devolvemos la URL de la última publicación
-            return urlUltimaPublicacion;
+            // Extraemos el id de la última publicación
+            const idUltimaPublicacion = items[0].id;
+            console.log('id de la última publicación:', idUltimaPublicacion);
+            // Devolvemos el id de la última publicación
+            return idUltimaPublicacion;
         } else {
             // Si el usuario no existe, devolvemos un string vacío
             return '';
@@ -207,11 +199,15 @@ const transporter = nodemailer.createTransport({
 
 async function subioFotoNueva(idPerfil: number, nombrePerfil: string) {
     const db = await abrirConexion();
-    const ultimaUrlGuardada = await db.all<string>(`SELECT urlUltimaPublicacion FROM Perfiles where id = ${idPerfil}`);
-    const urlUltimaImagen = await obtenerUltimaPublicacion(nombrePerfil);
-    console.log(urlUltimaImagen);
-    
-    return ultimaUrlGuardada !== urlUltimaImagen;
+    const ultimoIdPublicacionGuardado = await db.all<string>(`SELECT idUltimaPublicacion FROM Perfiles where id = ${idPerfil}`);
+    const idUltimaImagen = await obtenerUltimaPublicacion(nombrePerfil);
+    console.log(idUltimaImagen);
+    const subioFotoNueva = ultimoIdPublicacionGuardado !== idUltimaImagen;
+    if(subioFotoNueva){
+      const query = `UPDATE Perfiles SET idUltimaPublicacion='${idUltimaImagen}' WHERE id='${idPerfil}'`;
+      await db.run(query);
+    }
+    return subioFotoNueva;
 }
 
 // Esta función tiene que enviar un correo cuando se realice un nuevo posteo en cualquier perfil
@@ -229,8 +225,8 @@ export async function avisoPosteo() {
             // El from siempre va a quedar así
             from: '"Programación Cuatro" <appinstagramprogra@hotmail.com>', // sender address
             to: "lucaslrozenberg@gmail.com", // lista de destinatarios, va a ir a nuestro acosador (NOE NO ES LA ACOSADORA QUE QUIERE STALKEAR A SU EX, ES SOLO UNA PRUEBA)
-            subject: `${perfil} subió foto nueva`, // asunto
-            text: `${perfil} subió foto nueva`, // cuerpo de texto 
+            subject: `${perfil.nombre} subió foto nueva`, // asunto
+            text: `${perfil.nombre} subió foto nueva`, // cuerpo de texto 
           });  
           // Si me muestra esto en consola, es que funcionó y se envió el mensaje
           console.log("Mensaje enviado: %s", info.messageId);

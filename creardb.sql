@@ -26,9 +26,12 @@ delete urlUltimaPublicacion from Perfiles where id = 1;
 
 update Perfiles set urlUltimaPublicacion = '' where id = 2;
 
-alter table Perfiles add urlUltimaPublicacion varchar(255);
+ALTER TABLE Perfiles add idUltimaPublicacion VARCHAR(255);
 
-select * from Imagenes where Perfil = 1;
+ALTER TABLE Perfiles DROP COLUMN idUltimaPublicacion;
+
+
+select * from Imagenes where Perfil = 2;
 
 drop table Notificaciones;
 
@@ -37,3 +40,5 @@ delete from Imagenes where Perfil = 2;
 select * from Perfiles;
 
 INSERT INTO Perfiles (nombre) VALUES ("leomessi");
+
+SELECT COUNT(*) AS total_filas FROM Imagenes;
