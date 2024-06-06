@@ -1,5 +1,6 @@
 import express, { Express, Request, Response, NextFunction} from "express";
 import dotenv from "dotenv";
+import path from "path";
 import { agregarImagen, agregarPerfil, avisoPosteo, borrarPerfil, listarImagenesPorPerfil, listarPerfiles} from "./Modelo";
 
 dotenv.config();
@@ -15,8 +16,8 @@ function errorHandler(
     response.status(500).json({ mensaje: error.message });
 }
 
-app.use('imagen', express.static('imagenes'));
-app.use(express.json());
+app.use('/imagen', express.static(path.join(__dirname, '../imagenes')));app.use(express.json());
+
 
 // Perfiles
 app.post("/perfil/agregar", async (req: Request, res: Response, next: NextFunction) => {
@@ -59,6 +60,17 @@ app.get("/perfil", async (req: Request, res: Response, next: NextFunction) => {
 }); */
 
 // Imagenes
+app.get('/imagen/:id', (req, res) => {
+    const idImagen = req.params.id;
+    const rutaImagen = path.join(__dirname, '../imagenes', `${idImagen}.jpg`);
+
+    res.sendFile(rutaImagen, err => {
+        if (err) {
+            res.status(404).send('Imagen no encontrada');
+        }
+    });
+});
+
 app.post("/imagen/agregar", async (req: Request, res: Response, next: NextFunction) => {
     try {
         const id = req.body.id;

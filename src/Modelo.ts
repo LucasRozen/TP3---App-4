@@ -17,9 +17,6 @@ export interface Perfil {
     nombre: string,
     idUltimaPublicacion: string
 }
-export interface Notificacion {
-    mensaje: string
-}
 export interface Imagen {
     id: number,
     Perfil: number
@@ -89,7 +86,7 @@ export async function listarImagenesPorPerfil(idPerfil: number): Promise<Imagen[
     let cantTotalDeImagenes: number = (await db.all<Imagen[]>(`SELECT * FROM Imagenes;`)).length;
     const perfil = await db.get<Perfil>(`SELECT * FROM Perfiles WHERE id="${idPerfil}"`);
     if(perfil === undefined) return [];
-    if(await subioFotoNueva(idPerfil, perfil.nombre)){
+    if(imagenesPerfil.length === 0){
         const urls = await extraerFotosPerfil(perfil.nombre);
         console.log("urls.length: " + urls.length);
         for (let i = urls.length - imagenesPerfil.length - 1; i >= 0; i--) {
@@ -176,7 +173,6 @@ async function obtenerUltimaPublicacion(nombrePerfil: string): Promise<string> {
             const items = await media.items();
             // Extraemos el id de la última publicación
             const idUltimaPublicacion = items[0].id;
-            console.log('id de la última publicación:', idUltimaPublicacion);
             // Devolvemos el id de la última publicación
             return idUltimaPublicacion;
         } else {
@@ -199,9 +195,10 @@ const transporter = nodemailer.createTransport({
 
 async function subioFotoNueva(idPerfil: number, nombrePerfil: string) {
     const db = await abrirConexion();
-    const ultimoIdPublicacionGuardado = await db.all<string>(`SELECT idUltimaPublicacion FROM Perfiles where id = ${idPerfil}`);
+    const ultimoIdPublicacionGuardado = await db.get(`SELECT idUltimaPublicacion FROM Perfiles WHERE id='${idPerfil}'`).then(row => row.idUltimaPublicacion);
+    console.log('ultimo id guardado en bd:', ultimoIdPublicacionGuardado);
     const idUltimaImagen = await obtenerUltimaPublicacion(nombrePerfil);
-    console.log(idUltimaImagen);
+    console.log('id ultima imagen:', idUltimaImagen);
     const subioFotoNueva = ultimoIdPublicacionGuardado !== idUltimaImagen;
     if(subioFotoNueva){
       const query = `UPDATE Perfiles SET idUltimaPublicacion='${idUltimaImagen}' WHERE id='${idPerfil}'`;

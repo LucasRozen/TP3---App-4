@@ -35,7 +35,7 @@ select * from Imagenes where Perfil = 2;
 
 drop table Notificaciones;
 
-delete from Imagenes where Perfil = 2;
+delete from Perfiles;
 
 select * from Perfiles;
 
