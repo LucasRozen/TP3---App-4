@@ -30,7 +30,6 @@ ALTER TABLE Perfiles add idUltimaPublicacion VARCHAR(255);
 
 ALTER TABLE Perfiles DROP COLUMN idUltimaPublicacion;
 
-
 select * from Imagenes where Perfil = 2;
 
 drop table Notificaciones;

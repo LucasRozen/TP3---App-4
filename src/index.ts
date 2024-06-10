@@ -2,6 +2,7 @@ import express, { Express, Request, Response, NextFunction} from "express";
 import dotenv from "dotenv";
 import path from "path";
 import { agregarImagen, agregarPerfil, avisoPosteo, borrarPerfil, listarImagenesPorPerfil, listarPerfiles} from "./Modelo";
+import cors from "cors";
 
 dotenv.config();
 
@@ -16,8 +17,9 @@ function errorHandler(
     response.status(500).json({ mensaje: error.message });
 }
 
-app.use('/imagen', express.static(path.join(__dirname, '../imagenes')));app.use(express.json());
-
+app.use(cors());
+app.use('/imagen', express.static(path.join(__dirname, '../imagenes')));
+app.use(express.json());
 
 // Perfiles
 app.post("/perfil/agregar", async (req: Request, res: Response, next: NextFunction) => {
