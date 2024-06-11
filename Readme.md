@@ -50,3 +50,24 @@ user: appinstagramprogra@hotmail.com
 pass: programacion4
 El auth nunca lo van a tener que cambiar, siempre va a quedar así. 
 >*IMPORTANTE*: Lo único que van a cambiar es en la const info los datos (el mail al que lo van a mandar que va a ser el del acosador, el asunto, el texto, etc).
+
+# Endpoints
+## Perfiles
+- POST /perfil/agregar  
+    body:  
+    {  
+         "nombre": "leomessi"  
+    }
+
+- DELETE /perfil/borrar  
+    body:  
+    {  
+         "id": 1  
+    }
+
+- GET /perfil (devuelve la lista de perfiles)
+
+## Imagenes
+- GET /imagen/:id
+
+- GET /imagenesPorPerfil/:idPefil
