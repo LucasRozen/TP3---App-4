@@ -70,4 +70,4 @@ El auth nunca lo van a tener que cambiar, siempre va a quedar así.
 ## Imagenes
 - GET /imagen/:id
 
-- GET /imagenesPorPerfil/:idPefil
+- GET /imagenesPorPerfil/:idPerfil
