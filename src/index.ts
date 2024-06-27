@@ -12,14 +12,14 @@ const port = process.env.PORT || 3000;
 function errorHandler(
     error: Error, request: Request, response: Response
 ) {
-    console.log(`Hubo un error! ${error.message}`);
+    console.log(`Hubo un error!`, error);
     response.header("Content-Type", 'application/json');
     response.status(500).json({ mensaje: error.message });
 }
 
 app.use(cors());
-app.use('/imagen', express.static(path.join(__dirname, '../imagenes')));
 app.use(express.json());
+app.use('/imagen', express.static(path.join(__dirname, '../imagenes')));
 
 // Perfiles
 app.post("/perfil/agregar", async (req: Request, res: Response, next: NextFunction) => {
