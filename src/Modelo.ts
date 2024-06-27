@@ -221,7 +221,7 @@ export async function avisoPosteo() {
           const info = await transporter.sendMail({
             // El from siempre va a quedar así
             from: '"Programación Cuatro" <appinstagramprogra@hotmail.com>', // sender address
-            to: "lucaslrozenberg@gmail.com", // lista de destinatarios, va a ir a nuestro acosador (NOE NO ES LA ACOSADORA QUE QUIERE STALKEAR A SU EX, ES SOLO UNA PRUEBA)
+            to: "nushita_g@hotmail.com", // lista de destinatarios, va a ir a nuestro acosador (NOE NO ES LA ACOSADORA QUE QUIERE STALKEAR A SU EX, ES SOLO UNA PRUEBA)
             subject: `${perfil.nombre} subió foto nueva`, // asunto
             text: `${perfil.nombre} subió foto nueva`, // cuerpo de texto 
           });  
